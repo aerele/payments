@@ -8,7 +8,6 @@ import frappe
 import requests
 from frappe import _
 from frappe.integrations.utils import create_request_log
-from frappe.model.document import Document
 from frappe.utils import (
 	call_hook_method,
 	cint,
@@ -20,23 +19,15 @@ from frappe.utils import (
 from frappe.utils.password import get_decrypted_password
 from paytmchecksum import generateSignature, verifySignature
 
-from payments.utils import create_payment_gateway
+from payments.controllers.payments_controller import PaymentsController
 
 
-class PaytmSettings(Document):
+class PaytmSettings(PaymentsController):
 	supported_currencies = ("INR",)
 
 	def validate(self):
-		create_payment_gateway("Paytm")
+		self.create_payment_gateway()
 		call_hook_method("payment_gateway_enabled", gateway="Paytm")
-
-	def validate_transaction_currency(self, currency):
-		if currency not in self.supported_currencies:
-			frappe.throw(
-				_(
-					"Please select another payment method. Paytm does not support transactions in currency '{0}'"
-				).format(currency)
-			)
 
 	def get_payment_url(self, **kwargs):
 		"""Return payment url with several params"""

@@ -72,13 +72,12 @@ from frappe.integrations.utils import (
 	make_get_request,
 	make_post_request,
 )
-from frappe.model.document import Document
 from frappe.utils import call_hook_method, cint, get_timestamp, get_url
 
-from payments.utils import create_payment_gateway
+from payments.controllers.payments_controller import PaymentsController
 
 
-class RazorpaySettings(Document):
+class RazorpaySettings(PaymentsController):
 	supported_currencies = ("INR",)
 
 	def init_client(self):
@@ -87,7 +86,7 @@ class RazorpaySettings(Document):
 			self.client = razorpay.Client(auth=(self.api_key, secret))
 
 	def validate(self):
-		create_payment_gateway("Razorpay")
+		self.create_payment_gateway()
 		call_hook_method("payment_gateway_enabled", gateway="Razorpay")
 		if not self.flags.ignore_mandatory:
 			self.validate_razorpay_credentails()
@@ -104,14 +103,6 @@ class RazorpaySettings(Document):
 				)
 			except Exception:
 				frappe.throw(_("Seems API Key or API Secret is wrong !!!"))
-
-	def validate_transaction_currency(self, currency):
-		if currency not in self.supported_currencies:
-			frappe.throw(
-				_(
-					"Please select another payment method. Razorpay does not support transactions in currency '{0}'"
-				).format(currency)
-			)
 
 	def setup_addon(self, settings, **kwargs):
 		"""

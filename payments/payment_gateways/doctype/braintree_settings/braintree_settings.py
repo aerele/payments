@@ -7,13 +7,11 @@ import braintree
 import frappe
 from frappe import _
 from frappe.integrations.utils import create_request_log
-from frappe.model.document import Document
 from frappe.utils import call_hook_method, get_url
+from payments.controllers.payments_controller import PaymentsController
 
-from payments.utils import create_payment_gateway
 
-
-class BraintreeSettings(Document):
+class BraintreeSettings(PaymentsController):
 	supported_currencies = (
 		"AED",
 		"AMD",
@@ -157,11 +155,7 @@ class BraintreeSettings(Document):
 			self.configure_braintree()
 
 	def on_update(self):
-		create_payment_gateway(
-			"Braintree-" + self.gateway_name,
-			settings="Braintree Settings",
-			controller=self.gateway_name,
-		)
+		self.create_payment_gateway()
 		call_hook_method("payment_gateway_enabled", gateway="Braintree-" + self.gateway_name)
 
 	def configure_braintree(self):
@@ -176,14 +170,6 @@ class BraintreeSettings(Document):
 			public_key=self.public_key,
 			private_key=self.get_password(fieldname="private_key", raise_exception=False),
 		)
-
-	def validate_transaction_currency(self, currency):
-		if currency not in self.supported_currencies:
-			frappe.throw(
-				_(
-					"Please select another payment method. Stripe does not support transactions in currency '{0}'"
-				).format(currency)
-			)
 
 	def get_payment_url(self, **kwargs):
 		return get_url(f"./braintree_checkout?{urlencode(kwargs)}")

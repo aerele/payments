@@ -7,38 +7,24 @@ from json import dumps, loads
 import frappe
 from frappe import _
 from frappe.integrations.utils import create_request_log
-from frappe.model.document import Document
 from frappe.utils import call_hook_method, fmt_money, get_request_site_address
 
 from payments.payment_gateways.doctype.mpesa_settings.mpesa_connector import MpesaConnector
+from payments.controllers.payments_controller import PaymentsController
 from payments.payment_gateways.doctype.mpesa_settings.mpesa_custom_fields import (
 	create_custom_pos_fields,
 )
 from payments.utils import erpnext_app_import_guard
 
 
-class MpesaSettings(Document):
+class MpesaSettings(PaymentsController):
 	supported_currencies = ("KES",)
 
-	def validate_transaction_currency(self, currency):
-		if currency not in self.supported_currencies:
-			frappe.throw(
-				_(
-					"Please select another payment method. Mpesa does not support transactions in currency '{0}'"
-				).format(currency)
-			)
-
 	def on_update(self):
-		from payments.utils import create_payment_gateway
-
 		if "erpnext" in frappe.get_installed_apps():
 			create_custom_pos_fields()
 
-		create_payment_gateway(
-			"Mpesa-" + self.payment_gateway_name,
-			settings="Mpesa Settings",
-			controller=self.payment_gateway_name,
-		)
+		self.create_payment_gateway()
 		call_hook_method(
 			"payment_gateway_enabled", gateway="Mpesa-" + self.payment_gateway_name, payment_channel="Phone"
 		)

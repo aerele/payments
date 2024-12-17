@@ -69,16 +69,15 @@ from zoneinfo import ZoneInfo
 import frappe
 from frappe import _
 from frappe.integrations.utils import create_request_log, make_post_request
-from frappe.model.document import Document
 from frappe.utils import call_hook_method, cint, get_datetime, get_url
 from frappe.utils.data import get_system_timezone
 
-from payments.utils import create_payment_gateway
+from payments.controllers.payments_controller import PaymentsController
 
 api_path = "/api/method/payments.payment_gateways.doctype.paypal_settings.paypal_settings"
 
 
-class PayPalSettings(Document):
+class PayPalSettings(PaymentsController):
 	supported_currencies = (
 		"AUD",
 		"BRL",
@@ -115,21 +114,13 @@ class PayPalSettings(Document):
 		self.use_sandbox = cint(frappe._dict(data).use_sandbox) or 0
 
 	def validate(self):
-		create_payment_gateway("PayPal")
+		self.create_payment_gateway()
 		call_hook_method("payment_gateway_enabled", gateway="PayPal")
 		if not self.flags.ignore_mandatory:
 			self.validate_paypal_credentails()
 
 	def on_update(self):
 		pass
-
-	def validate_transaction_currency(self, currency):
-		if currency not in self.supported_currencies:
-			frappe.throw(
-				_(
-					"Please select another payment method. PayPal does not support transactions in currency '{0}'"
-				).format(currency)
-			)
 
 	def get_paypal_params_and_url(self):
 		params = {

@@ -8,11 +8,11 @@ import frappe
 import gocardless_pro
 from frappe import _
 from frappe.integrations.utils import create_request_log
-from frappe.model.document import Document
 from frappe.utils import call_hook_method, cint, flt, get_url
+from payments.controllers.payments_controller import PaymentsController
 
 
-class GoCardlessSettings(Document):
+class GoCardlessSettings(PaymentsController):
 	supported_currencies = ("EUR", "DKK", "GBP", "SEK", "AUD", "NZD", "CAD", "USD")
 
 	def validate(self):
@@ -27,11 +27,7 @@ class GoCardlessSettings(Document):
 			frappe.throw(e)
 
 	def on_update(self):
-		from payments.utils import create_payment_gateway
-
-		create_payment_gateway(
-			"GoCardless-" + self.gateway_name, settings="GoCardless Settings", controller=self.gateway_name
-		)
+		self.create_payment_gateway()
 		call_hook_method("payment_gateway_enabled", gateway="GoCardless-" + self.gateway_name)
 
 	def on_payment_request_submission(self, data):
@@ -86,14 +82,6 @@ class GoCardlessSettings(Document):
 			return "sandbox"
 		else:
 			return "live"
-
-	def validate_transaction_currency(self, currency):
-		if currency not in self.supported_currencies:
-			frappe.throw(
-				_(
-					"Please select another payment method. Go Cardless does not support transactions in currency '{0}'"
-				).format(currency)
-			)
 
 	def get_payment_url(self, **kwargs):
 		return get_url(f"gocardless_checkout?{urlencode(kwargs)}")

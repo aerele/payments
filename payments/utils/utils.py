@@ -44,21 +44,6 @@ def get_checkout_url(**kwargs):
 			http_status_code=frappe.ValidationError.http_status_code,
 		)
 
-
-def create_payment_gateway(gateway, settings=None, controller=None):
-	# NOTE: we don't translate Payment Gateway name because it is an internal doctype
-	if not frappe.db.exists("Payment Gateway", gateway):
-		payment_gateway = frappe.get_doc(
-			{
-				"doctype": "Payment Gateway",
-				"gateway": gateway,
-				"gateway_settings": settings,
-				"gateway_controller": controller,
-			}
-		)
-		payment_gateway.insert(ignore_permissions=True)
-
-
 def make_custom_fields():
 	if not frappe.get_meta("Web Form").has_field("payments_tab"):
 		click.secho("* Installing Payment Custom Fields in Web Form")

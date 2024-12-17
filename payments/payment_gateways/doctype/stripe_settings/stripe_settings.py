@@ -7,10 +7,9 @@ from urllib.parse import urlencode
 import frappe
 from frappe import _
 from frappe.integrations.utils import create_request_log, make_get_request
-from frappe.model.document import Document
 from frappe.utils import call_hook_method, cint, flt, get_url
 
-from payments.utils import create_payment_gateway
+from payments.controllers.payments_controller import PaymentsController
 
 currency_wise_minimum_charge_amount = {
 	"JPY": 50,
@@ -31,7 +30,7 @@ currency_wise_minimum_charge_amount = {
 }
 
 
-class StripeSettings(Document):
+class StripeSettings(PaymentsController):
 	supported_currencies = (
 		"AED",
 		"ALL",
@@ -152,11 +151,7 @@ class StripeSettings(Document):
 	currency_wise_minimum_charge_amount = MappingProxyType(currency_wise_minimum_charge_amount)
 
 	def on_update(self):
-		create_payment_gateway(
-			"Stripe-" + self.gateway_name,
-			settings="Stripe Settings",
-			controller=self.gateway_name,
-		)
+		self.create_payment_gateway()
 		call_hook_method("payment_gateway_enabled", gateway="Stripe-" + self.gateway_name)
 		if not self.flags.ignore_mandatory:
 			self.validate_stripe_credentails()
@@ -172,14 +167,6 @@ class StripeSettings(Document):
 				make_get_request(url="https://api.stripe.com/v1/charges", headers=header)
 			except Exception:
 				frappe.throw(_("Seems Publishable Key or Secret Key is wrong !!!"))
-
-	def validate_transaction_currency(self, currency):
-		if currency not in self.supported_currencies:
-			frappe.throw(
-				_(
-					"Please select another payment method. Stripe does not support transactions in currency '{0}'"
-				).format(currency)
-			)
 
 	def validate_minimum_transaction_amount(self, currency, amount):
 		if currency in self.currency_wise_minimum_charge_amount:
